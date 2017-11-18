@@ -42,7 +42,9 @@ inv_error_t MPU9250_DMP::begin(void)
     struct int_param_s int_param;
 	
 	Wire.begin();
-	
+	/////////////////////////////////////////
+	Wire.setClock(400000); 
+
 	result = mpu_init(&int_param);
 	
 	if (result)
@@ -612,7 +614,7 @@ float MPU9250_DMP::calcQuat(long axis)
 	
 float MPU9250_DMP::qToFloat(long number, unsigned char q)
 {
-	unsigned long mask;
+	unsigned long mask = 0;
 	for (int i=0; i<q; i++)
 	{
 		mask |= (1<<i);
@@ -622,50 +624,76 @@ float MPU9250_DMP::qToFloat(long number, unsigned char q)
 
 void MPU9250_DMP::computeEulerAngles(bool degrees)
 {
-    float dqw = qToFloat(qw, 30);
-    float dqx = qToFloat(qx, 30);
-    float dqy = qToFloat(qy, 30);
-    float dqz = qToFloat(qz, 30);
-    
-    float ysqr = dqy * dqy;
-    float t0 = -2.0f * (ysqr + dqz * dqz) + 1.0f;
-    float t1 = +2.0f * (dqx * dqy - dqw * dqz);
-    float t2 = -2.0f * (dqx * dqz + dqw * dqy);
-    float t3 = +2.0f * (dqy * dqz - dqw * dqx);
-    float t4 = -2.0f * (dqx * dqx + ysqr) + 1.0f;
-  
-	// Keep t2 within range of asin (-1, 1)
-    t2 = t2 > 1.0f ? 1.0f : t2;
-    t2 = t2 < -1.0f ? -1.0f : t2;
-  
-    pitch = asin(t2) * 2;
-    roll = atan2(t3, t4);
-    yaw = atan2(t1, t0);
-	
+	float dqw = qToFloat(qw, 30);
+	float dqx = qToFloat(qx, 30);
+	float dqy = qToFloat(qy, 30);
+	float dqz = qToFloat(qz, 30);
+
+//   float ysqr = dqy * dqy;
+//   float t0 = -2.0f * (ysqr + dqz * dqz) + 1.0f;
+//   float t1 = +2.0f * (dqx * dqy - dqw * dqz);
+//   float t2 = -2.0f * (dqx * dqz + dqw * dqy);
+//   float t3 = +2.0f * (dqy * dqz - dqw * dqx);
+//   float t4 = -2.0f * (dqx * dqx + ysqr) + 1.0f;
+// 
+	//// Keep t2 within range of asin (-1, 1)
+ //   t2 = t2 > 1.0f ? 1.0f : t2;
+ //   t2 = t2 < -1.0f ? -1.0f : t2;
+ // 
+ //   pitch = asin(t2) * 2;
+ //   roll = atan2(t3, t4);
+ //   yaw = atan2(t1, t0);
+
+	float norm = sqrt(dqw*dqw + dqx*dqx + dqy*dqy + dqz*dqz);
+	dqw = dqw/norm;
+	dqx = dqx/norm;
+	dqy = dqy/norm;
+	dqz = dqz/norm;
+
+	float ysqr = dqy * dqy;
+
+	// roll (x-axis rotation)
+	float t0 = +2.0 * (dqw * dqx + dqy * dqz);
+	float t1 = +1.0 - 2.0 * (dqx * dqx + ysqr);
+	roll = atan2(t0, t1);
+
+	// pitch (y-axis rotation)
+	float t2 = +2.0 * (dqw * dqy - dqz * dqx);
+	t2 = t2 > 1.0 ? 1.0 : t2;
+	t2 = t2 < -1.0 ? -1.0 : t2;
+	pitch = asin(t2);
+
+	// yaw (z-axis rotation)
+	float t3 = +2.0 * (dqw * dqz + dqx * dqy);
+	float t4 = +1.0 - 2.0 * (ysqr + dqz * dqz);
+	yaw = atan2(t3, t4);
+
 	if (degrees)
 	{
 		pitch *= (180.0 / PI);
 		roll *= (180.0 / PI);
 		yaw *= (180.0 / PI);
-		if (pitch < 0) pitch = 360.0 + pitch;
-		if (roll < 0) roll = 360.0 + roll;
-		if (yaw < 0) yaw = 360.0 + yaw;	
+		//if (pitch < 0) pitch = 360.0 + pitch;
+		//if (roll < 0) roll = 360.0 + roll;
+		//if (yaw < 0) yaw = 360.0 + yaw;	
 	}
 }
 
 float MPU9250_DMP::computeCompassHeading(void)
 {
-	if (my == 0)
-		heading = (mx < 0) ? 180.0 : 0;
-	else
-		heading = atan2(mx, my);
-	
+	//if (my == 0)
+	//	//heading = (mx < 0) ? 180.0 : 0;
+	//	heading = (mx < 0) ? -PI/2 : PI/2;
+	//else
+	//	heading = atan2(mx, my);
+	heading = atan2(mx, my); // Mag axis are not the same as acc/gyro.
+
 	if (heading > PI) heading -= (2 * PI);
 	else if (heading < -PI) heading += (2 * PI);
 	else if (heading < 0) heading += 2 * PI;
-	
-	heading*= 180.0 / PI;
-	
+
+	heading *= 180.0 / PI;
+
 	return heading;
 }
 
