@@ -367,6 +367,10 @@ public:
 	// computeCompassHeading -- Compute heading based on most recently read mx, my, and mz values
 	// Output: class variable heading will be updated on exit
 	float computeCompassHeading(void);
+
+	// computeCompensatedCompassHeading -- Compute compensated heading based on most recently read mx, my, mz, roll, pitch, yaw values
+	// Output: class variable heading will be updated on exit
+	float computeCompensatedCompassHeading(void);
 	
 	// selfTest -- Run gyro and accel self-test.
 	// Output: Returns bit mask, 1 indicates success. A 0x7 is success on all sensors.

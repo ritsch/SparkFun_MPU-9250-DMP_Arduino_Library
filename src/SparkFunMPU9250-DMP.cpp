@@ -629,20 +629,20 @@ void MPU9250_DMP::computeEulerAngles(bool degrees)
 	float dqy = qToFloat(qy, 30);
 	float dqz = qToFloat(qz, 30);
 
-//   float ysqr = dqy * dqy;
-//   float t0 = -2.0f * (ysqr + dqz * dqz) + 1.0f;
-//   float t1 = +2.0f * (dqx * dqy - dqw * dqz);
-//   float t2 = -2.0f * (dqx * dqz + dqw * dqy);
-//   float t3 = +2.0f * (dqy * dqz - dqw * dqx);
-//   float t4 = -2.0f * (dqx * dqx + ysqr) + 1.0f;
-// 
-	//// Keep t2 within range of asin (-1, 1)
- //   t2 = t2 > 1.0f ? 1.0f : t2;
- //   t2 = t2 < -1.0f ? -1.0f : t2;
- // 
- //   pitch = asin(t2) * 2;
- //   roll = atan2(t3, t4);
- //   yaw = atan2(t1, t0);
+//	float ysqr = dqy * dqy;
+//	float t0 = -2.0f * (ysqr + dqz * dqz) + 1.0f;
+//	float t1 = +2.0f * (dqx * dqy - dqw * dqz);
+//	float t2 = -2.0f * (dqx * dqz + dqw * dqy);
+//	float t3 = +2.0f * (dqy * dqz - dqw * dqx);
+//	float t4 = -2.0f * (dqx * dqx + ysqr) + 1.0f;
+//
+//	// Keep t2 within range of asin (-1, 1)
+//	t2 = t2 > 1.0f ? 1.0f : t2;
+//	t2 = t2 < -1.0f ? -1.0f : t2;
+//
+//	pitch = asin(t2) * 2;
+//	roll = atan2(t3, t4);
+//	yaw = atan2(t1, t0);
 
 	float norm = sqrt(dqw*dqw + dqx*dqx + dqy*dqy + dqz*dqz);
 	dqw = dqw/norm;
@@ -686,7 +686,38 @@ float MPU9250_DMP::computeCompassHeading(void)
 	//	heading = (mx < 0) ? -PI/2 : PI/2;
 	//else
 	//	heading = atan2(mx, my);
-	heading = atan2(mx, my); // Mag axis are not the same as acc/gyro.
+	heading = atan2(mx, my);
+
+	if (heading > PI) heading -= (2 * PI);
+	else if (heading < -PI) heading += (2 * PI);
+	else if (heading < 0) heading += 2 * PI;
+
+	heading *= 180.0 / PI;
+
+	return heading;
+}
+
+float MPU9250_DMP::computeCompensatedCompassHeading(void)
+{
+	float cmx = 0;
+	float cmy = 0;
+	float cos_roll = cos(roll*PI/180.0f);
+	float sin_roll = sin(roll*PI/180.0f);
+	float cos_pitch = cos(pitch*PI/180.0f);
+	float sin_pitch = sin(pitch*PI/180.0f);
+
+	// Should ensure that Euler angles are computed...?
+	//computeEulerAngles();
+
+	// Mag axis are not the same as acc/gyro (x and y swapped and inverted z).
+
+	cmx = my * cos_pitch + mx * sin_roll * sin_pitch - mz * cos_roll * sin_pitch;
+	cmy = mx * cos_roll + mz * sin_roll;
+
+	//cmx = my * cos_pitch - mz * sin_pitch;
+	//cmy = my * sin_roll * sin_pitch + mx * cos_roll + mz * sin_roll * cos_pitch;
+
+	heading = atan2(cmy, cmx); // Convert to similar values as computeCompassHeading()...
 
 	if (heading > PI) heading -= (2 * PI);
 	else if (heading < -PI) heading += (2 * PI);
