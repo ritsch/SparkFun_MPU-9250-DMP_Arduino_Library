@@ -44,7 +44,7 @@ inv_error_t MPU9250_DMP::begin(void)
 	Wire.begin();
 
 	// https://github.com/sparkfun/SparkFun_MPU-9250-DMP_Arduino_Library/issues/12
-	Wire.setClock(400000); 
+	//Wire.setClock(400000); 
 
 	result = mpu_init(&int_param);
 	
