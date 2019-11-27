@@ -92,6 +92,10 @@ static inline int reg_int_cb(struct int_param_s *int_param)
 /* #warning "No compass = less profit for Invensense. Lame." */
 #endif
 
+#ifdef ESP32
+#define min(a,b) ((a)<(b)?(a):(b))
+#endif
+
 //static int set_int_enable(unsigned char enable);
 
 /* Hardware registers needed by driver. */
